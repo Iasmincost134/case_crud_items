@@ -1,0 +1,55 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+// Prisma 7: a URL fica em prisma.config.ts e é passada ao PrismaClient via adapter.
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDENTE
+  CONCLUIDO
+  CANCELADO
+}
+
+model Product {
+  id                Int         @id @default(autoincrement())
+  nome              String
+  categoria         String
+  descricao         String
+  preco             Decimal     @db.Decimal(10, 2)
+  quantidadeEstoque Int
+  criadoEm          DateTime    @default(now())
+  atualizadoEm      DateTime    @updatedAt
+  orderItems        OrderItem[]
+
+  @@index([categoria])
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  status       OrderStatus @default(PENDENTE)
+  total        Decimal     @db.Decimal(18, 2)
+  criadoEm     DateTime    @default(now())
+  atualizadoEm DateTime    @updatedAt
+  itens        OrderItem[]
+
+  @@index([status])
+}
+
+model OrderItem {
+  id            Int     @id @default(autoincrement())
+  orderId       Int
+  productId     Int
+  quantidade    Int
+  // Preço do produto no momento do pedido (histórico não muda se o preço mudar depois).
+  precoUnitario Decimal @db.Decimal(10, 2)
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId])
+  @@index([productId])
+}
